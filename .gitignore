@@ -1,0 +1,9 @@
+.vscode
+__pycache__
+/build
+/dist
+creds.json
+*.xlsx
+session.pkl
+*.spec
+.DS_Store
