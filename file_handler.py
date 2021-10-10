@@ -21,6 +21,8 @@ def multi_threading(function, func_arg_list, max_workers):
 
 
 def check_urls(url):
+    if not url:
+        return ""
     if "initpro" in url:
         return ""
     else:
