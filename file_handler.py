@@ -135,13 +135,13 @@ class FillXlsxFile:
             return ""
 
         if "zakupki.gov.ru/epz" in link:
-            return functions["epz"](link=link)
+            return functions["epz"](link)
         elif "zakupki.gov.ru" in link:
-            return functions["zakupki"](link=link)
+            return functions["zakupki"](link)
         elif "b2b-center.ru" in link:
-            return functions["b2b"](link=link)
+            return functions["b2b"](link)
         else:
-            return ""
+            return [ParticipantItem()]
 
     def get_notice_number(self, link):
         return self.get_smth_from_link(

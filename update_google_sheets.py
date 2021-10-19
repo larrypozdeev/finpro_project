@@ -7,22 +7,22 @@ from config import *
 
 
 class GoogleSheet:
+    SCOPE = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/drive",
+    ]
+    CREDS = ServiceAccountCredentials.from_json_keyfile_dict(creds_json, SCOPE)
+
+    CLIENT = gspread.authorize(CREDS)
+
     def __init__(self, file_path=None, sheet_name="Copy of ЦК СТС", worksheet="Лист 1"):
-        SCOPE = [
-            "https://spreadsheets.google.com/feeds",
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive.file",
-            "https://www.googleapis.com/auth/drive",
-        ]
-        CREDS = ServiceAccountCredentials.from_json_keyfile_dict(creds_json, SCOPE)
-
-        CLIENT = gspread.authorize(CREDS)
-
-        for spreadsheet in CLIENT.openall():
+        for spreadsheet in self.CLIENT.openall():
             print(spreadsheet.title)
 
         worksheet_index = int(worksheet.get()[-1]) - 1
-        self.sheet = CLIENT.open(sheet_name).get_worksheet(worksheet_index)
+        self.sheet = self.CLIENT.open(sheet_name).get_worksheet(worksheet_index)
         self.data = self.sheet.get_all_records(numericise_ignore=["all"])
         self.file_path = file_path
         self.xlsx_content = None
@@ -80,7 +80,7 @@ class GoogleSheet:
         )
 
     def update_all_bargaining_result(self, get_fn):
-        indent = 250
+        indent = 1000
         df = pd.DataFrame(self.data)
         df.fillna("", inplace=True)
         df_copy = df.copy()
@@ -88,7 +88,7 @@ class GoogleSheet:
         links_indices = []
         links = []
         for i in range(len(df[settings_data["sheet_fields"]["link"]])):
-            if df[settings_data["sheet_fields"]["participaters"]][i]:
+            if df[settings_data["sheet_fields"]["participants"]][i]:
                 continue
             if df[settings_data["sheet_fields"]["winner"]][i]:
                 continue
@@ -100,43 +100,46 @@ class GoogleSheet:
             links.append(df[settings_data["sheet_fields"]["link"]][i])
         print(links_indices[-indent:])
         updated_dict = multi_threading(get_fn, links[-indent:], 4)
-        updated_dict = [
-            x if x != "" else [{"name": "", "status": "", "number": ""}]
-            for x in updated_dict
-        ]
-
+        print(updated_dict)
         for (i, el_list) in enumerate(updated_dict):
-            if len(el_list) == 1:
-                if len(el_list[0]["status"]):
-                    sheet_index = links_indices[-indent:][i]
-                    print(el_list[0]["status"], sheet_index)
-                    df[settings_data["sheet_fields"]["participaters"]][
-                        sheet_index
-                    ] = el_list[0]["status"]
+            if not el_list:
+                continue
+            sheet_index = links_indices[-indent:][i]
+            if el_list[0].status and not (el_list[0].name or el_list[0].number):
+                participants = []
+                for j in el_list:
+                    participants.append(j.status)
+                df[settings_data["sheet_fields"]["participants"]][
+                    sheet_index
+                ] = " ;\n".join(participants)
                 continue
 
-            sheet_index = links_indices[-indent:][i]
-            if len(el_list) == 2 and len(el_list[0]["status"]) > 25:
-                df[settings_data["sheet_fields"]["winner"]][sheet_index] = el_list[0][
-                    "status"
-                ]
-                df[settings_data["sheet_fields"]["participaters"]][
+            if len(el_list) == 1:
+                if len(el_list[0].status):
+                    df[settings_data["sheet_fields"]["participants"]][
+                        sheet_index
+                    ] = el_list[0].status
+                continue
+
+            if len(el_list) == 2 and len(el_list[0].status) > 25:
+                df[settings_data["sheet_fields"]["winner"]][sheet_index] = el_list[
+                    0
+                ].status
+                df[settings_data["sheet_fields"]["participants"]][
                     sheet_index
-                ] = el_list[1]["name"]
+                ] = el_list[1].name
                 continue
 
             participants = []
             for j in el_list:
-                participants.append(j["name"])
-                if "победитель" in j["status"].lower():
-                    df[settings_data["sheet_fields"]["winner"]][sheet_index] = j["name"]
-                    df[settings_data["sheet_fields"]["price"]][sheet_index] = j[
-                        "number"
-                    ]
+                participants.append(j.name)
+                if "победитель" in j.status.lower():
+                    df[settings_data["sheet_fields"]["winner"]][sheet_index] = j.name
+                    df[settings_data["sheet_fields"]["price"]][sheet_index] = j.number
                     continue
-            df[settings_data["sheet_fields"]["participaters"]][
-                sheet_index
-            ] = ";\n".join(participants)
+            df[settings_data["sheet_fields"]["participants"]][sheet_index] = ";\n".join(
+                participants
+            )
 
         self.sheet.update([df.columns.values.tolist()] + df.values.tolist())
 
