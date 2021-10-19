@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 import os
-import time
-
 from config import logging, settings_data, log_fun
 from tkinter import *
 from tkinter import _setit
