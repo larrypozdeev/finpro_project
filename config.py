@@ -2,7 +2,7 @@ import json
 import pkgutil
 import logging
 import logging.config
-
+from functools import wraps
 
 logging.config.dictConfig(
     {
@@ -52,20 +52,18 @@ logging.config.dictConfig(
 help_bin = pkgutil.get_data("config", "creds.json")
 creds_json = help_bin.decode("UTF-8", "ignore")
 creds_json = json.loads(creds_json)
-DEBUG = True
+DEBUG = False
 
 
 def log_fun(fn):
-    from functools import wraps
-
     @wraps(fn)
     def wrapper(*args, **kwargs):
         log = logging.getLogger(fn.__name__)
-        log.info("About to run %s" % fn.__name__)
+        log.info("About to run %s", fn.__name__)
 
         out = fn(*args, **kwargs)
 
-        log.info("Done running %s" % fn.__name__)
+        log.info("Done running %s", fn.__name__)
 
         return out
 
