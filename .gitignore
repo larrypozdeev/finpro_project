@@ -7,3 +7,5 @@ creds.json
 session.pkl
 *.spec
 .DS_Store
+*.ipynb*
+/venv
